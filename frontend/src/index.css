@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-impala-ivory text-impala-charcoal antialiased font-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-impala-brown text-white px-4 py-2 rounded-lg hover:bg-impala-brown-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium font-body;
+  }
+  .btn-secondary {
+    @apply bg-impala-sand text-impala-charcoal px-4 py-2 rounded-lg hover:bg-impala-sand-dark transition-colors font-medium font-body;
+  }
+  .btn-outline {
+    @apply border border-impala-brown text-impala-brown px-4 py-2 rounded-lg hover:bg-impala-sand transition-colors font-medium font-body;
+  }
+  .btn-success {
+    @apply bg-impala-green text-white px-4 py-2 rounded-lg hover:bg-impala-green-dark transition-colors font-medium font-body;
+  }
+  .input-field {
+    @apply w-full px-4 py-2 border border-impala-sand-dark rounded-lg bg-impala-ivory focus:ring-2 focus:ring-impala-brown focus:border-impala-brown outline-none transition-colors text-impala-charcoal placeholder:text-impala-charcoal-muted;
+  }
+  .card {
+    @apply bg-impala-sand-light rounded-xl shadow-sm border border-impala-sand p-6;
+  }
+  .card-white {
+    @apply bg-impala-ivory rounded-xl shadow-sm border border-impala-sand p-6;
+  }
+  .badge-green {
+    @apply bg-impala-green/10 text-impala-green text-xs px-2 py-1 rounded-full font-medium;
+  }
+  .badge-brown {
+    @apply bg-impala-brown/10 text-impala-brown text-xs px-2 py-1 rounded-full font-medium;
+  }
+  .badge-sand {
+    @apply bg-impala-sand text-impala-charcoal-muted text-xs px-2 py-1 rounded-full font-medium;
+  }
+  .progress-bar {
+    @apply bg-impala-sand-dark rounded-full h-2 overflow-hidden;
+  }
+  .progress-fill {
+    @apply bg-impala-green h-full rounded-full transition-all duration-500;
+  }
+}
