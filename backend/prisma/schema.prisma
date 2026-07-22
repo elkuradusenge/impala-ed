@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  student
+  mentor
+  admin
+}
+
+enum DifficultyLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum SubmissionStatus {
+  pending
+  submitted
+  reviewed
+}
+
+enum NotificationType {
+  message
+  enrollment
+  lesson_completed
+  assignment
+  course_update
+  system
+}
+
+model User {
+  id                 String          @id @default(cuid())
+  name               String
+  email              String          @unique
+  password           String
+  role               UserRole        @default(student)
+  isActive           Boolean         @default(true)
+  isVerified         Boolean         @default(false)
+  profilePicture     String          @default("")
+  bio                String          @default("")
+  lastLogin          DateTime?
+  resetPasswordToken String?
+  resetPasswordExpire DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  coursesMentored    Course[]
+  pdfDocuments       PdfDocument[]
+  assignments        Assignment[]
+  sentMessages       Message[]       @relation("SentMessages")
+  receivedMessages   Message[]       @relation("ReceivedMessages")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  enrollments        Enrollment[]
+  submissions        AssignmentSubmission[]
+  settingsUpdated    PlatformSetting[]
+
+  @@map("User")
+}
+
+model CourseCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @default("")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courses     Course[]
+
+  @@map("CourseCategory")
+}
+
+model Course {
+  id                 String           @id @default(cuid())
+  title              String
+  slug               String?          @unique
+  description        String
+  shortDescription   String           @default("")
+  categoryId         String?
+  category           CourseCategory?  @relation(fields: [categoryId], references: [id])
+  mentorId           String
+  mentor             User             @relation(fields: [mentorId], references: [id])
+  difficultyLevel    DifficultyLevel  @default(beginner)
+  duration           String           @default("")
+  learningObjectives String[]
+  thumbnail          String           @default("")
+  isPublished        Boolean          @default(false)
+  isFeatured         Boolean          @default(false)
+  isArchived         Boolean          @default(false)
+  isApproved         Boolean          @default(false)
+  enrollmentCount    Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  modules            Module[]
+  lessons            Lesson[]
+  assignments        Assignment[]
+  enrollments        Enrollment[]
+  submissions        AssignmentSubmission[]
+
+  @@map("Course")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+
+  @@map("Module")
+}
+
+model Lesson {
+  id           String       @id @default(cuid())
+  title        String
+  description  String       @default("")
+  moduleId     String
+  module       Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order        Int          @default(0)
+  pdfDocumentId String?
+  pdfDocument  PdfDocument? @relation(fields: [pdfDocumentId], references: [id])
+  duration     String       @default("")
+  isPublished  Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("Lesson")
+}
+
+model PdfDocument {
+  id           String   @id @default(cuid())
+  title        String
+  fileName     String
+  originalName String
+  filePath     String
+  fileSize     Int
+  mimeType     String   @default("application/pdf")
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  totalPages   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lessons      Lesson[]
+
+  @@map("PdfDocument")
+}
+
+model Assignment {
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @default("")
+  instructions   String
+  courseId       String
+  course         Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  mentorId       String
+  mentor         User          @relation(fields: [mentorId], references: [id])
+  googleDocsLink String        @default("")
+  dueDate        DateTime?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  submissions    AssignmentSubmission[]
+
+  @@map("Assignment")
+}
+
+model AssignmentSubmission {
+  id             String           @id @default(cuid())
+  assignmentId   String
+  assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        User             @relation(fields: [studentId], references: [id])
+  courseId       String
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  submittedLink  String           @default("")
+  status         SubmissionStatus @default(pending)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  mentorFeedback String           @default("")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@map("AssignmentSubmission")
+}
+
+model Enrollment {
+  id               String    @id @default(cuid())
+  studentId        String
+  student          User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId         String
+  course           Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completedLessons String[] 
+  currentLessonId  String?
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  enrolledAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([studentId, courseId])
+  @@map("Enrollment")
+}
+
+model Message {
+  id                  String   @id @default(cuid())
+  senderId            String
+  sender              User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId          String
+  receiver            User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  subject             String   @default("")
+  content             String
+  isRead              Boolean  @default(false)
+  readAt              DateTime?
+  isDeletedBySender   Boolean  @default(false)
+  isDeletedByReceiver Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@map("Message")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType @default(system)
+  title       String
+  message     String
+  relatedId   String?
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("Notification")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  resource   String
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@map("AuditLog")
+}
+
+model PlatformSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String   @default("")
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("PlatformSetting")
+}
