@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faKey, faSpinner, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
@@ -24,11 +25,16 @@ const ForgotPasswordPage: React.FC = () => {
       const data = await response.json();
       if (response.ok) {
         setMessage('Password reset link has been sent to your email.');
+        toast.success('Reset link sent to your email');
       } else {
-        setError(data.message || 'Something went wrong');
+        const msg = data.message || 'Something went wrong';
+        setError(msg);
+        toast.error(msg);
       }
     } catch (_) {
-      setError('Unable to process request');
+      const msg = 'Unable to process request';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

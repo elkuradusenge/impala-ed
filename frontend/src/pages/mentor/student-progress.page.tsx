@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../hooks/use-auth.hook';
 import { useCourses } from '../../hooks/use-courses.hook';
 import { useQuery } from '@tanstack/react-query';
@@ -9,7 +9,8 @@ import { faUserGraduate, faChartLine, faCheckCircle, faClock } from '@fortawesom
 
 const StudentProgressPage: React.FC = () => {
   const { user } = useAuth();
-  const { data: courses } = useCourses({ mentor: user?.id || '' });
+  const courseParams = useMemo(() => ({ mentor: user?.id || '' }), [user?.id]);
+  const { data: courses } = useCourses(courseParams);
   const [selectedCourse, setSelectedCourse] = useState('');
   const { data: progressData, isLoading } = useQuery({
     queryKey: ['studentProgress', selectedCourse],

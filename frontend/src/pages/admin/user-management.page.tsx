@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUsers } from '../../hooks/use-users.hook';
 import * as userService from '../../services/user.service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,8 @@ const UserManagementPage: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
-  const { data: users, isLoading } = useUsers({ ...(filter ? { role: filter } : {}), ...(search ? { search } : {}) });
+  const userParams = useMemo(() => ({ ...(filter ? { role: filter } : {}), ...(search ? { search } : {}) }), [filter, search]);
+  const { data: users, isLoading } = useUsers(userParams);
 
   const handleToggleActive = async (userId: string, current: boolean) => {
     try { await userService.updateUser(userId, { isActive: !current } as any); queryClient.invalidateQueries({ queryKey: ['users'] }); } catch (_) {}

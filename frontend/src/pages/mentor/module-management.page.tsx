@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useCourseById } from '../../hooks/use-courses.hook';
 import { useModulesByCourse, useCreateModule } from '../../hooks/use-lessons.hook';
 import * as moduleService from '../../services/module.service';
@@ -20,13 +21,17 @@ const ModuleManagementPage: React.FC = () => {
     try {
       if (editing) {
         await moduleService.updateModule(editing, formData);
+        toast.success('Module updated');
       } else {
         await moduleService.createModule({ ...formData, courseId: courseId! });
+        toast.success('Module created');
       }
       setShowForm(false); setEditing(null);
       setFormData({ title: '', description: '' });
       refetch();
-    } catch (_) {}
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save module');
+    }
   };
 
   const handleEdit = (mod: any) => {
@@ -37,7 +42,7 @@ const ModuleManagementPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this module and all its lessons?')) {
-      try { await moduleService.deleteModule(id); refetch(); } catch (_) {}
+      try { await moduleService.deleteModule(id); refetch(); toast.success('Module deleted'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to delete'); }
     }
   };
 

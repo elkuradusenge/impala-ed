@@ -12,6 +12,7 @@ export interface Course {
   mentor?: { id: string; name: string; email: string; profilePicture?: string };
   category?: { id: string; name: string };
   modules?: any[];
+  courseMaterials?: { id: string; title: string; fileName: string; originalName: string; fileSize: number; createdAt: string }[];
   isPublished?: boolean;
   isApproved?: boolean;
   isArchived?: boolean;

@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useCourseById } from '../../hooks/use-courses.hook';
 import { useLessonProgress, useCompleteLesson } from '../../hooks/use-lessons.hook';
+import { useAssignmentsByCourse, useMyAttempts } from '../../hooks/use-assignments.hook';
 import { getPDFUrl } from '../../services/pdf.service';
 import LoadingSpinner from '../../components/LoadingSpinner.component';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheckCircle, faCircle, faFilePdf, faGraduationCap, faBookOpen } from '@fortawesome/free-solid-svg-icons';
+import { faCheckCircle, faCircle, faFilePdf, faGraduationCap, faBookOpen, faArrowRight, faTrophy, faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
 
 const LearningPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const { data: course, isLoading } = useCourseById(courseId!);
   const { data: progress, refetch: refetchProgress } = useLessonProgress(courseId!);
   const completeMutation = useCompleteLesson();
+  const { data: assignments } = useAssignmentsByCourse(courseId!);
+  const assignment = assignments?.[0];
+  const { data: attempts } = useMyAttempts(assignment?.id || '');
+  const latestAttempt = attempts?.find((a: any) => a.status === 'submitted');
 
   const [currentLesson, setCurrentLesson] = useState<any>(null);
   const [currentModule, setCurrentModule] = useState<any>(null);
@@ -35,8 +41,11 @@ const LearningPage: React.FC = () => {
     if (!currentLesson) return;
     try {
       await completeMutation.mutateAsync(currentLesson.id || currentLesson._id);
+      toast.success('Lesson completed!');
       refetchProgress();
-    } catch (_) {}
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to mark lesson as completed');
+    }
   };
 
   if (isLoading) return <LoadingSpinner />;
@@ -143,14 +152,54 @@ const LearningPage: React.FC = () => {
 
             {progress?.completed && (
               <div className="card-white bg-impala-green/5 border-impala-green/20">
-                <h3 className="font-semibold text-impala-green mb-2 font-display">
-                  <FontAwesomeIcon icon={faGraduationCap} className="mr-2" />
-                  Course Completed!
-                </h3>
-                <p className="text-impala-green/80 mb-4">You have completed all lessons. You can now access the assignment.</p>
-                <Link to={`/assignments/${courseId}`} className="btn-success inline-flex items-center space-x-2">
-                  <span>View Assignment</span>
-                </Link>
+                {!assignment ? (
+                  <>
+                    <h3 className="font-semibold text-impala-green mb-2 font-display">
+                      <FontAwesomeIcon icon={faGraduationCap} className="mr-2" />
+                      Course Completed!
+                    </h3>
+                    <p className="text-impala-green/80 mb-4">You have completed all lessons in this course.</p>
+                  </>
+                ) : !latestAttempt ? (
+                  <>
+                    <h3 className="font-semibold text-impala-green mb-2 font-display">
+                      <FontAwesomeIcon icon={faGraduationCap} className="mr-2" />
+                      Course Completed!
+                    </h3>
+                    <p className="text-impala-green/80 mb-4">You have completed all lessons. You can now access the assignment.</p>
+                    <Link to={`/assignments/${courseId}`} className="btn-success inline-flex items-center space-x-2">
+                      <FontAwesomeIcon icon={faArrowRight} className="mr-1" />
+                      <span>View Assignment</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-semibold text-impala-green mb-2 font-display">
+                      <FontAwesomeIcon icon={faTrophy} className="mr-2" />
+                      Course Completed!
+                    </h3>
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="flex items-center space-x-2 bg-white rounded-lg px-4 py-2 shadow-sm">
+                        <FontAwesomeIcon icon={faClipboardCheck} className="text-impala-green" />
+                        <div>
+                          <p className="text-xs text-impala-charcoal-muted">Assignment Score</p>
+                          <p className="text-lg font-bold text-impala-charcoal">
+                            {latestAttempt.score}/{assignment.totalPoints}
+                            <span className="text-sm font-normal text-impala-charcoal-muted ml-1">
+                              ({latestAttempt.percentage}%)
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex space-x-3">
+                      <Link to={`/assignments/${courseId}`} className="btn-outline inline-flex items-center space-x-2 text-sm">
+                        <FontAwesomeIcon icon={faBookOpen} className="mr-1" />
+                        <span>Review Answers</span>
+                      </Link>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

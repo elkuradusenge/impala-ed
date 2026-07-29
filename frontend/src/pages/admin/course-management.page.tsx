@@ -1,17 +1,20 @@
+import { useMemo } from 'react';
+import { toast } from 'sonner';
 import { useCourses, useApproveCourse, useUpdateCourse, useDeleteCourse } from '../../hooks/use-courses.hook';
 import LoadingSpinner from '../../components/LoadingSpinner.component';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faStar, faArchive, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 
 const AdminCourseManagementPage: React.FC = () => {
-  const { data: courses, isLoading } = useCourses({});
+  const emptyParams = useMemo(() => ({}), []);
+  const { data: courses, isLoading } = useCourses(emptyParams);
   const approveMutation = useApproveCourse();
   const updateMutation = useUpdateCourse();
   const archiveMutation = useDeleteCourse();
 
-  const handleApprove = async (id: string) => { try { await approveMutation.mutateAsync(id); } catch (_) {} };
-  const handleToggleFeatured = async (id: string, current: boolean) => { try { await updateMutation.mutateAsync({ id, data: { isFeatured: !current } }); } catch (_) {} };
-  const handleArchive = async (id: string) => { if (window.confirm('Archive this course?')) { try { await archiveMutation.mutateAsync(id); } catch (_) {} } };
+  const handleApprove = async (id: string) => { try { await approveMutation.mutateAsync(id); toast.success('Course approved'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to approve'); } };
+  const handleToggleFeatured = async (id: string, current: boolean) => { try { await updateMutation.mutateAsync({ id, data: { isFeatured: !current } }); toast.success(current ? 'Unfeatured' : 'Featured'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to update'); } };
+  const handleArchive = async (id: string) => { if (window.confirm('Archive this course?')) { try { await archiveMutation.mutateAsync(id); toast.success('Course archived'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to archive'); } } };
 
   if (isLoading) return <LoadingSpinner />;
 

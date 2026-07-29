@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/use-auth.hook';
 import Layout from './components/layout/Layout';
@@ -11,6 +12,7 @@ import LoginPage from './pages/public/login.page';
 import RegisterPage from './pages/public/register.page';
 import ForgotPasswordPage from './pages/public/forgot-password.page';
 import PublicCoursesPage from './pages/public/courses.page';
+import AboutPage from './pages/public/about.page';
 
 // Student Pages
 import StudentDashboardPage from './pages/student/dashboard.page';
@@ -75,6 +77,7 @@ const AppRoutes: React.FC = () => (
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/about" element={<AboutPage />} />
       <Route path="/dashboard" element={<DashboardRedirect />} />
 
       {/* Student Routes */}
@@ -243,6 +246,7 @@ const App: React.FC = () => {
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <Toaster position="top-right" richColors closeButton />
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
