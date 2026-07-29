@@ -46,6 +46,49 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 };
 
+/**
+ * Optional auth middleware — reads the Bearer token if present and sets req.user,
+ * but does NOT block the request if no token is provided.
+ * Used for public routes that need to know the user's role (e.g. course listing).
+ */
+export const optionalAuth = async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  let token: string | undefined;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as {
+      id: string;
+      role: string;
+    };
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, name: true, email: true, role: true, isActive: true },
+    });
+
+    if (user && user.isActive) {
+      req.user = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+    }
+  } catch (_) {
+    // Token invalid or expired — just continue without user context
+  }
+
+  next();
+};
+
 export const authorize = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {

@@ -15,6 +15,7 @@ export const uploadPDF = asyncWrapper(async (req: AuthRequest, res: Response) =>
     filePath: req.file.path,
     fileSize: req.file.size,
     uploadedById: req.user!.id,
+    courseId: req.body.courseId || undefined,
   });
   res.status(201).json(pdf);
 });

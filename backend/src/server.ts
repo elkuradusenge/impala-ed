@@ -30,6 +30,7 @@ import notificationRoutes from './routes/notification.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import settingsRoutes from './routes/settings.routes';
 import progressRoutes from './routes/progress.routes';
+import interestRoutes from './routes/interest.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -44,6 +45,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/interests', interestRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
