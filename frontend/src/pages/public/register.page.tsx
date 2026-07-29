@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '../../hooks/use-auth.hook';
-import { useSaveCourseInterests } from '../../hooks/use-interest.hook';
-import { COURSE_SEED_DATA } from '../../data/seed';
+import { useSaveCourseInterests, useAvailableInterests } from '../../hooks/use-interest.hook';
+import LoadingSpinner from '../../components/LoadingSpinner.component';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUser,
@@ -23,20 +24,6 @@ import {
 type RegisterRole = 'student' | 'mentor';
 type FormStep = 'personal' | 'interests';
 
-interface CourseInterest {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-}
-
-const COURSE_INTERESTS: CourseInterest[] = COURSE_SEED_DATA.map((c) => ({
-  id: c.id,
-  name: c.name,
-  category: c.category,
-  description: c.description,
-}));
-
 const STEPS: { key: FormStep; label: string }[] = [
   { key: 'personal', label: 'Personal Information' },
   { key: 'interests', label: 'Interested Courses' },
@@ -46,11 +33,7 @@ const RegisterPage: React.FC = () => {
   const { isAuthenticated, loading: authLoading, register } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users away from register page
-  if (!authLoading && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  // ALL hooks must be called unconditionally before any early return
   const [selectedRole, setSelectedRole] = useState<RegisterRole | null>(null);
   const [page, setPage] = useState<'role' | 'form'>('role');
   const [formStep, setFormStep] = useState<FormStep>('personal');
@@ -67,6 +50,12 @@ const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const saveInterests = useSaveCourseInterests();
+  const { data: availableCourses, isLoading: interestsLoading } = useAvailableInterests();
+
+  // Redirect authenticated users away from register page
+  if (!authLoading && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const isStudent = selectedRole === 'student';
   const currentStepIndex = STEPS.findIndex((s) => s.key === formStep);
@@ -136,6 +125,7 @@ const RegisterPage: React.FC = () => {
         await saveInterests.mutateAsync(formData.selectedCourses);
       }
 
+      toast.success(`Welcome to ImpalaEd, ${user.name}!`);
       const routes: Record<string, string> = {
         student: '/student/dashboard',
         mentor: '/mentor/dashboard',
@@ -143,7 +133,9 @@ const RegisterPage: React.FC = () => {
       };
       navigate(routes[user.role] || '/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = err.response?.data?.message || 'Registration failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -331,39 +323,51 @@ const RegisterPage: React.FC = () => {
       <p className="text-xs text-impala-charcoal-muted mb-3">
         Select the courses you are interested in{selectedRole === 'mentor' ? ' teaching' : ''}
       </p>
-      <div className="grid md:grid-cols-2 gap-3">
-        {COURSE_INTERESTS.map((course) => {
-          const isSelected = formData.selectedCourses.includes(course.id);
-          return (
-            <button
-              key={course.id}
-              type="button"
-              onClick={() => toggleCourse(course.id)}
-              className={`flex items-start space-x-3 p-3 rounded-lg border-2 text-left transition-all ${
-                isSelected
-                  ? isStudent
-                    ? 'border-impala-brown bg-impala-brown/5'
-                    : 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300 bg-white'
-              }`}
-            >
-              <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
-                isSelected
-                  ? isStudent
-                    ? 'bg-impala-brown border-impala-brown'
-                    : 'bg-emerald-500 border-emerald-500'
-                  : 'border-gray-300'
-              }`}>
-                {isSelected && <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-impala-charcoal">{course.name}</p>
-                <p className="text-xs text-impala-charcoal-muted">{course.category}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {interestsLoading ? (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner size="sm" />
+        </div>
+      ) : !availableCourses || availableCourses.length === 0 ? (
+        <p className="text-center text-impala-charcoal-muted py-8">
+          No courses available yet. You can skip this step and browse later.
+        </p>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-3">
+          {(availableCourses as any[]).map((course: any) => {
+            const isSelected = formData.selectedCourses.includes(course.id);
+            return (
+              <button
+                key={course.id}
+                type="button"
+                onClick={() => toggleCourse(course.id)}
+                className={`flex items-start space-x-3 p-3 rounded-lg border-2 text-left transition-all ${
+                  isSelected
+                    ? isStudent
+                      ? 'border-impala-brown bg-impala-brown/5'
+                      : 'border-emerald-500 bg-emerald-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
+                  isSelected
+                    ? isStudent
+                      ? 'bg-impala-brown border-impala-brown'
+                      : 'bg-emerald-500 border-emerald-500'
+                    : 'border-gray-300'
+                }`}>
+                  {isSelected && <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-impala-charcoal">{course.title}</p>
+                  <p className="text-xs text-impala-charcoal-muted">
+                    {course.category?.name || course.difficultyLevel}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 

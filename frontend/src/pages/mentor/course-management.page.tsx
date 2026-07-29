@@ -1,41 +1,97 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '../../hooks/use-auth.hook';
 import { useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, useCategories } from '../../hooks/use-courses.hook';
+import { uploadPDF as uploadPDFService } from '../../services/pdf.service';
 import LoadingSpinner from '../../components/LoadingSpinner.component';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faArchive, faBookOpen, faLayerGroup, faTimes, faSave } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faArchive, faBookOpen, faLayerGroup, faTimes, faSave, faFilePdf, faUpload, faSpinner, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const CourseManagementPage: React.FC = () => {
   const { user } = useAuth();
-  const { data: courses, isLoading } = useCourses({ mentor: user?.id || '' });
+  const courseParams = useMemo(() => ({ mentor: user?.id || '' }), [user?.id]);
+  const { data: courses, isLoading } = useCourses(courseParams);
   const { data: categories } = useCategories();
   const createMutation = useCreateCourse();
   const updateMutation = useUpdateCourse();
   const deleteMutation = useDeleteCourse();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfError, setPdfError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<any>({
-    title: '', description: '', shortDescription: '', difficultyLevel: 'beginner', duration: '', category: '', learningObjectives: [''],
+    title: '', description: '', shortDescription: '', difficultyLevel: 'beginner', duration: '', categoryId: '', learningObjectives: [''],
   });
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', shortDescription: '', difficultyLevel: 'beginner', duration: '', category: '', learningObjectives: [''] });
+    setFormData({ title: '', description: '', shortDescription: '', difficultyLevel: 'beginner', duration: '', categoryId: '', learningObjectives: [''] });
+    setPdfFile(null);
+    setPdfError('');
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPdfError('');
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setPdfError('Only PDF files are allowed');
+      setPdfFile(null);
+      return;
+    }
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      setPdfError('File size must be less than 50MB');
+      setPdfFile(null);
+      return;
+    }
+    setPdfFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const data = { ...formData, learningObjectives: formData.learningObjectives.filter((o: string) => o.trim()) };
+      let courseId: string;
+
       if (editing) {
-        await updateMutation.mutateAsync({ id: editing, data });
+        const result = await updateMutation.mutateAsync({ id: editing, data });
+        courseId = editing;
+        toast.success('Course updated successfully');
       } else {
-        await createMutation.mutateAsync(data);
+        const result = await createMutation.mutateAsync(data);
+        courseId = result.id;
+        toast.success('Course created successfully');
       }
+
+      // Upload PDF if selected
+      if (pdfFile && courseId) {
+        setUploadingPdf(true);
+        try {
+          const fd = new FormData();
+          fd.append('pdf', pdfFile);
+          fd.append('title', pdfFile.name);
+          fd.append('courseId', courseId);
+          await uploadPDFService(fd);
+          toast.success('Course material uploaded successfully');
+        } catch (_) {
+          const msg = 'Failed to upload course material. You can upload it later.';
+          setPdfError(msg);
+          toast.error(msg);
+        } finally {
+          setUploadingPdf(false);
+        }
+      }
+
       setShowForm(false);
       setEditing(null);
       resetForm();
-    } catch (_) {}
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save course');
+    }
   };
 
   const handleEdit = (course: any) => {
@@ -43,7 +99,7 @@ const CourseManagementPage: React.FC = () => {
     setFormData({
       title: course.title, description: course.description, shortDescription: course.shortDescription || '',
       difficultyLevel: course.difficultyLevel, duration: course.duration || '',
-      category: course.category?.id || course.category?._id || '',
+      categoryId: course.category?.id || course.category?._id || '',
       learningObjectives: course.learningObjectives?.length ? course.learningObjectives : [''],
     });
     setShowForm(true);
@@ -51,7 +107,16 @@ const CourseManagementPage: React.FC = () => {
 
   const handleArchive = async (id: string) => {
     if (window.confirm('Archive this course?')) {
-      try { await deleteMutation.mutateAsync(id); } catch (_) {}
+      try { await deleteMutation.mutateAsync(id); toast.success('Course archived'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to archive'); }
+    }
+  };
+
+  const handleTogglePublish = async (id: string, current: boolean) => {
+    try {
+      await updateMutation.mutateAsync({ id, data: { isPublished: !current } });
+      toast.success(current ? 'Course unpublished' : 'Course published');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update publish status');
     }
   };
 
@@ -102,7 +167,7 @@ const CourseManagementPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-impala-charcoal mb-1">Category</label>
-                <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="input-field">
+                <select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="input-field">
                   <option value="">Select category</option>
                   {(categories || []).map((cat: any) => (
                     <option key={cat.id || cat._id} value={cat.id || cat._id}>{cat.name}</option>
@@ -127,7 +192,54 @@ const CourseManagementPage: React.FC = () => {
               <button type="button" onClick={() => setFormData({ ...formData, learningObjectives: [...formData.learningObjectives, ''] })}
                 className="text-sm text-impala-brown hover:text-impala-brown-dark">+ Add Objective</button>
             </div>
-            <button type="submit" className="btn-primary"><FontAwesomeIcon icon={faSave} className="mr-1" /> {editing ? 'Update Course' : 'Create Course'}</button>
+
+            {/* PDF Upload field */}
+            <div>
+              <label className="block text-sm font-medium text-impala-charcoal mb-2">
+                <FontAwesomeIcon icon={faFilePdf} className="mr-1" />
+                Course Material (PDF)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn-outline text-sm inline-flex items-center space-x-2"
+                >
+                  <FontAwesomeIcon icon={faUpload} />
+                  <span>{pdfFile ? pdfFile.name : 'Choose PDF file'}</span>
+                </button>
+                {pdfFile && (
+                  <button
+                    type="button"
+                    onClick={() => { setPdfFile(null); setPdfError(''); }}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    <FontAwesomeIcon icon={faTimes} />
+                  </button>
+                )}
+              </div>
+              {pdfError && (
+                <p className="text-red-500 text-xs mt-1">{pdfError}</p>
+              )}
+              <p className="text-xs text-impala-charcoal-muted mt-1">
+                Upload a PDF document (max 50MB) to share with enrolled students.
+              </p>
+            </div>
+
+            <button type="submit" disabled={uploadingPdf} className="btn-primary">
+              {uploadingPdf ? (
+                <><FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" /> Uploading...</>
+              ) : (
+                <><FontAwesomeIcon icon={faSave} className="mr-1" /> {editing ? 'Update Course' : 'Create Course'}</>
+              )}
+            </button>
           </form>
         </div>
       )}
@@ -144,6 +256,12 @@ const CourseManagementPage: React.FC = () => {
                     <h3 className="font-medium text-impala-charcoal">{course.title}</h3>
                     {course.isPublished ? <span className="badge-green">Published</span> : <span className="badge-sand">Draft</span>}
                     {course.isApproved && <span className="badge-brown">Approved</span>}
+                    {course.courseMaterials && course.courseMaterials.length > 0 && (
+                      <span className="text-xs text-impala-charcoal-muted">
+                        <FontAwesomeIcon icon={faFilePdf} className="mr-1" />
+                        {course.courseMaterials.length} PDF(s)
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-impala-charcoal-muted mt-1">{course.difficultyLevel} | {course.enrollmentCount || 0} students</p>
                 </div>
@@ -151,6 +269,14 @@ const CourseManagementPage: React.FC = () => {
                   <Link to={`/mentor/courses/${course.id || course._id}/modules`} className="text-sm text-impala-brown hover:text-impala-brown-dark">
                     <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />Modules
                   </Link>
+                  <button
+                    onClick={() => handleTogglePublish(course.id || course._id, course.isPublished)}
+                    className={`text-sm ${course.isPublished ? 'text-amber-600 hover:text-amber-800' : 'text-impala-green hover:text-impala-green-dark'}`}
+                    title={course.isPublished ? 'Unpublish' : 'Publish'}
+                  >
+                    <FontAwesomeIcon icon={course.isPublished ? faEye : faEyeSlash} className="mr-1" />
+                    {course.isPublished ? 'Unpublish' : 'Publish'}
+                  </button>
                   <button onClick={() => handleEdit(course)} className="text-sm text-impala-charcoal-muted hover:text-impala-charcoal">
                     <FontAwesomeIcon icon={faEdit} />
                   </button>

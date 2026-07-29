@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../hooks/use-auth.hook';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faEnvelope, faInfoCircle, faLock, faSave, faSpinner } from '@fortawesome/free-solid-svg-icons';
@@ -22,8 +23,11 @@ const ProfilePage: React.FC = () => {
     try {
       await updateProfile({ name, bio });
       setMessage('Profile updated successfully');
+      toast.success('Profile updated successfully');
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Update failed');
+      const msg = err.response?.data?.message || 'Update failed';
+      setMessage(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -33,17 +37,21 @@ const ProfilePage: React.FC = () => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       setPasswordMessage('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
     setPasswordMessage('');
     try {
       await changePassword(currentPassword, newPassword);
       setPasswordMessage('Password changed successfully');
+      toast.success('Password changed successfully');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      setPasswordMessage(err.response?.data?.message || 'Password change failed');
+      const msg = err.response?.data?.message || 'Password change failed';
+      setPasswordMessage(msg);
+      toast.error(msg);
     }
   };
 

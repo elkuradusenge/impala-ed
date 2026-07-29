@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../hooks/use-auth.hook';
 import { useConversations, useMessages, useSendMessage } from '../hooks/use-messages.hook';
 import { useUsers } from '../hooks/use-users.hook';
@@ -23,7 +24,10 @@ const MessagesPage: React.FC = () => {
     try {
       await sendMutation.mutateAsync({ receiver: selectedPartner, content: newMessage });
       setNewMessage('');
-    } catch (_) {}
+      toast.success('Message sent');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    }
   };
 
   const handleStartChat = async (e: React.FormEvent) => {
@@ -35,7 +39,10 @@ const MessagesPage: React.FC = () => {
       setNewChatPartner('');
       setShowNewChat(false);
       setSelectedPartner(newChatPartner);
-    } catch (_) {}
+      toast.success('Message sent');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    }
   };
 
   if (convLoading) return <LoadingSpinner />;

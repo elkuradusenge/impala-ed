@@ -17,6 +17,7 @@ import {
   faUsers,
   faCog,
   faHome,
+  faClipboardList,
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ── Navigation item definition ── */
@@ -29,7 +30,7 @@ interface NavItem {
 /* ── Role-specific nav links ── */
 const GUEST_LINKS: NavItem[] = [
   { label: 'Home', to: '/', icon: faHome },
-  { label: 'Courses', to: '/courses', icon: faBook },
+  { label: 'About Us', to: '/about', icon: faBook },
 ];
 
 const STUDENT_LINKS: NavItem[] = [
@@ -42,6 +43,7 @@ const MENTOR_LINKS: NavItem[] = [
   { label: 'Dashboard', to: '/mentor/dashboard', icon: faTachometerAlt },
   { label: 'My Courses', to: '/mentor/courses', icon: faBookOpen },
   { label: 'Create Course', to: '/mentor/courses', icon: faPlusCircle },
+  { label: 'Assignments', to: '/mentor/assignments', icon: faClipboardList },
   { label: 'Students', to: '/mentor/progress', icon: faUserGraduate },
 ];
 

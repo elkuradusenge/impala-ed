@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useEnrolledCourses } from '../../hooks/use-enrollment.hook';
-import { useMySubmissions } from '../../hooks/use-assignments.hook';
 import LoadingSpinner from '../../components/LoadingSpinner.component';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBookOpen, faFileAlt, faCheckCircle, faClock, faChartLine } from '@fortawesome/free-solid-svg-icons';
 
 const ProgressPage: React.FC = () => {
   const { data: courses, isLoading: coursesLoading } = useEnrolledCourses();
-  const { data: submissions, isLoading: subLoading } = useMySubmissions();
 
-  if (coursesLoading || subLoading) return <LoadingSpinner />;
+  if (coursesLoading) return <LoadingSpinner />;
 
   return (
     <div>
@@ -45,32 +43,6 @@ const ProgressPage: React.FC = () => {
                   </div>
                   <span className="text-sm font-medium text-impala-green">{course.completionPercentage || 0}%</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="card-white">
-        <h2 className="text-lg font-semibold font-display text-impala-charcoal mb-4">
-          <FontAwesomeIcon icon={faFileAlt} className="mr-2 text-impala-brown" />
-          Assignment Status
-        </h2>
-        {(!submissions || submissions.length === 0) ? (
-          <p className="text-impala-charcoal-muted text-center py-8">No assignments submitted yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {submissions.map((sub: any) => (
-              <div key={sub.id || sub._id} className="flex items-center justify-between p-3 bg-impala-sand rounded-lg">
-                <div>
-                  <p className="font-medium text-sm text-impala-charcoal">{sub.assignment?.title}</p>
-                  <p className="text-xs text-impala-charcoal-muted">{sub.assignment?.course?.title}</p>
-                </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                  sub.status === 'reviewed' ? 'badge-green' : sub.status === 'submitted' ? 'badge-brown' : 'badge-sand'
-                }`}>
-                  {sub.status}
-                </span>
               </div>
             ))}
           </div>

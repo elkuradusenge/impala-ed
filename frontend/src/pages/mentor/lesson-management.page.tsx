@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useModuleById } from '../../hooks/use-module.hook';
 import { useLessonsByModule, useCreateLesson } from '../../hooks/use-lessons.hook';
 import * as lessonService from '../../services/lesson.service';
@@ -21,17 +22,28 @@ const LessonManagementPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-              const courseId = mod?.courseId || '';
-      const data = { ...formData, module: moduleId || '', course: courseId, pdfDocument: formData.pdfDocument || undefined };
+      const courseId = mod?.courseId || '';
+      const data = {
+        title: formData.title,
+        description: formData.description,
+        moduleId: moduleId || '',
+        courseId,
+        pdfDocumentId: formData.pdfDocument || undefined,
+        duration: formData.duration,
+      };
       if (editing) {
         await lessonService.updateLesson(editing, data);
+        toast.success('Lesson updated');
       } else {
         await lessonService.createLesson(data as any);
+        toast.success('Lesson created');
       }
       setShowForm(false); setEditing(null);
       setFormData({ title: '', description: '', pdfDocument: '', duration: '' });
       refetch();
-    } catch (_) {}
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save lesson');
+    }
   };
 
   const handleEdit = (lesson: any) => {
@@ -45,7 +57,7 @@ const LessonManagementPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this lesson?')) {
-      try { await lessonService.deleteLesson(id); refetch(); } catch (_) {}
+      try { await lessonService.deleteLesson(id); refetch(); toast.success('Lesson deleted'); } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to delete'); }
     }
   };
 

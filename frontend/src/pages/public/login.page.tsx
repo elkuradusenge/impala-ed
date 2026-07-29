@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '../../hooks/use-auth.hook';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -23,16 +24,17 @@ const LoginPage: React.FC = () => {
   const { isAuthenticated, loading: authLoading, login } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users away from login page
-  if (!authLoading && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  // ALL hooks must be called unconditionally before any early return
   const [activeTab, setActiveTab] = useState<LoginRole>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
+
+  // Redirect authenticated users away from login page
+  if (!authLoading && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const isStudent = activeTab === 'student';
   const roleLabel = isStudent ? 'Student' : 'Teacher';
@@ -43,6 +45,7 @@ const LoginPage: React.FC = () => {
     setFormLoading(true);
     try {
       const data = await login(email, password);
+      toast.success(`Welcome back, ${data.name}!`);
       const routes: Record<string, string> = {
         student: '/student/dashboard',
         mentor: '/mentor/dashboard',
@@ -50,7 +53,9 @@ const LoginPage: React.FC = () => {
       };
       navigate(routes[data.role] || '/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      const msg = err.response?.data?.message || 'Login failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setFormLoading(false);
     }
