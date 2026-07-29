@@ -5,8 +5,20 @@ import fs from 'fs';
 export const uploadPDF = async (data: {
   title: string; fileName: string; originalName: string;
   filePath: string; fileSize: number; uploadedById: string;
+  courseId?: string;
 }) => {
-  return prisma.pdfDocument.create({ data });
+  const createData: any = {
+    title: data.title,
+    fileName: data.fileName,
+    originalName: data.originalName,
+    filePath: data.filePath,
+    fileSize: data.fileSize,
+    uploadedById: data.uploadedById,
+  };
+  if (data.courseId) {
+    createData.courseId = data.courseId;
+  }
+  return prisma.pdfDocument.create({ data: createData });
 };
 
 export const getPDFs = async () => {

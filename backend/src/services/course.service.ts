@@ -3,9 +3,15 @@ import { NotFoundError } from '../utils/errors';
 import { slugify } from '../utils/formatters';
 
 export const createCourse = async (data: any, mentorId: string) => {
+  // Clean up empty foreign key values to avoid Prisma FK violations
+  const sanitizedData = { ...data };
+  if (!sanitizedData.categoryId) {
+    delete sanitizedData.categoryId;
+  }
+
   const course = await prisma.course.create({
     data: {
-      ...data,
+      ...sanitizedData,
       mentorId,
       slug: slugify(data.title),
       learningObjectives: data.learningObjectives || [],
@@ -26,9 +32,11 @@ export const getCourses = async (query: any, userRole?: string) => {
   if (query.isPublished !== undefined) where.isPublished = query.isPublished === 'true';
   if (query.isArchived !== undefined) where.isArchived = query.isArchived === 'true';
 
-  if (userRole === 'student') {
+  // For non-admin/non-mentor users (students AND unauthenticated visitors),
+  // only show published, non-archived courses.
+  // Admin approval is optional — publishing makes the course visible immediately.
+  if (userRole === 'student' || !userRole) {
     where.isPublished = true;
-    where.isApproved = true;
     where.isArchived = false;
   }
 
@@ -45,6 +53,7 @@ export const getCourses = async (query: any, userRole?: string) => {
       mentor: { select: { id: true, name: true, email: true, profilePicture: true } },
       category: true,
       modules: { include: { lessons: { include: { pdfDocument: { select: { id: true, title: true, fileName: true } } } } } },
+      courseMaterials: { select: { id: true, title: true, fileName: true, originalName: true, fileSize: true, createdAt: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -65,6 +74,10 @@ export const getCourseById = async (id: string) => {
           },
         },
       },
+      courseMaterials: {
+        select: { id: true, title: true, fileName: true, originalName: true, fileSize: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
   if (!course) throw new NotFoundError('Course');
@@ -75,9 +88,15 @@ export const updateCourse = async (id: string, data: any) => {
   const course = await prisma.course.findUnique({ where: { id } });
   if (!course) throw new NotFoundError('Course');
 
-  if (data.title) data.slug = slugify(data.title);
+  // Clean up empty foreign key values to avoid Prisma FK violations
+  const sanitizedData = { ...data };
+  if (sanitizedData.categoryId === '' || sanitizedData.categoryId === null) {
+    sanitizedData.categoryId = undefined;
+  }
 
-  return prisma.course.update({ where: { id }, data });
+  if (sanitizedData.title) sanitizedData.slug = slugify(sanitizedData.title);
+
+  return prisma.course.update({ where: { id }, data: sanitizedData });
 };
 
 export const archiveCourse = async (id: string) => {

@@ -4,20 +4,22 @@ import {
   deleteCourse, approveCourse, getCategories, createCategory,
   updateCategory, deleteCategory,
 } from '../controllers/course.controller';
-import { protect, authorize } from '../middleware/auth';
+import { protect, authorize, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
-router.use(protect);
-router.get('/', getCourses);
-router.get('/categories/all', getCategories);
-router.post('/categories', authorize('admin'), createCategory);
-router.put('/categories/:id', authorize('admin'), updateCategory);
-router.delete('/categories/:id', authorize('admin'), deleteCategory);
-router.get('/:id', getCourseById);
-router.post('/', authorize('mentor', 'admin'), createCourse);
-router.put('/:id', authorize('mentor', 'admin'), updateCourse);
-router.delete('/:id', authorize('mentor', 'admin'), deleteCourse);
-router.put('/:id/approve', authorize('admin'), approveCourse);
+// Public routes — no auth required, but optionalAuth sets req.user if token present
+router.get('/', optionalAuth, getCourses);
+router.get('/categories/all', optionalAuth, getCategories);
+router.get('/:id', optionalAuth, getCourseById);
+
+// Protected routes — auth required
+router.post('/categories', protect, authorize('admin'), createCategory);
+router.put('/categories/:id', protect, authorize('admin'), updateCategory);
+router.delete('/categories/:id', protect, authorize('admin'), deleteCategory);
+router.post('/', protect, authorize('mentor', 'admin'), createCourse);
+router.put('/:id', protect, authorize('mentor', 'admin'), updateCourse);
+router.delete('/:id', protect, authorize('mentor', 'admin'), deleteCourse);
+router.put('/:id/approve', protect, authorize('admin'), approveCourse);
 
 export default router;

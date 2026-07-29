@@ -60,6 +60,9 @@ model User {
   enrollments        Enrollment[]
   submissions        AssignmentSubmission[]
   settingsUpdated    PlatformSetting[]
+  courseInterests    CourseInterest[]
+  assignmentAnswers  AssignmentAnswer[]
+  assignmentAttempts AssignmentAttempt[]
 
   @@map("User")
 }
@@ -104,6 +107,8 @@ model Course {
   assignments        Assignment[]
   enrollments        Enrollment[]
   submissions        AssignmentSubmission[]
+  courseInterests    CourseInterest[]
+  courseMaterials    PdfDocument[]
 
   @@map("Course")
 }
@@ -153,6 +158,8 @@ model PdfDocument {
   mimeType     String   @default("application/pdf")
   uploadedById String
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  courseId     String?
+  course       Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
   totalPages   Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -166,20 +173,105 @@ model Assignment {
   id             String        @id @default(cuid())
   title          String
   description    String        @default("")
-  instructions   String
+  instructions   String        @default("")
   courseId       String
   course         Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   mentorId       String
   mentor         User          @relation(fields: [mentorId], references: [id])
+  totalPoints    Int           @default(0)
+  passingScore   Int           @default(50)
+  timeLimit      Int?
+  maxAttempts    Int           @default(1)
+  shuffleQuestions Boolean     @default(false)
+  shuffleOptions Boolean       @default(false)
+  showCorrectAnswers Boolean   @default(true)
+  showExplanations Boolean     @default(true)
   googleDocsLink String        @default("")
+  isPublished    Boolean       @default(false)
   dueDate        DateTime?
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  questions      AssignmentQuestion[]
   submissions    AssignmentSubmission[]
+  attempts       AssignmentAttempt[]
 
   @@map("Assignment")
+}
+
+model AssignmentQuestion {
+  id            String       @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  questionText  String
+  questionType  String       @default("text")
+  points        Int          @default(5)
+  explanation   String       @default("")
+  orderIndex    Int          @default(0)
+  isRequired    Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  options       QuestionOption[]
+  answers       AssignmentAnswer[]
+
+  @@map("AssignmentQuestion")
+}
+
+model QuestionOption {
+  id         String             @id @default(cuid())
+  questionId String
+  question   AssignmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  optionText String
+  isCorrect  Boolean            @default(false)
+  orderIndex Int                @default(0)
+  createdAt  DateTime           @default(now())
+
+  studentAnswers AssignmentAnswer[]
+
+  @@map("QuestionOption")
+}
+
+model AssignmentAnswer {
+  id              String             @id @default(cuid())
+  questionId      String
+  question        AssignmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         User               @relation(fields: [studentId], references: [id])
+  attemptId       String
+  attempt         AssignmentAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  selectedOptionId String?
+  selectedOption  QuestionOption?    @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+  answer          String             @default("")
+  isCorrect       Boolean            @default(false)
+  pointsEarned    Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([questionId, attemptId])
+  @@map("AssignmentAnswer")
+}
+
+model AssignmentAttempt {
+  id            String    @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       User      @relation(fields: [studentId], references: [id])
+  attemptNumber Int       @default(1)
+  startedAt     DateTime  @default(now())
+  submittedAt   DateTime?
+  score         Int       @default(0)
+  percentage    Float     @default(0)
+  status        String    @default("in_progress")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  answers       AssignmentAnswer[]
+
+  @@unique([studentId, assignmentId, attemptNumber])
+  @@map("AssignmentAttempt")
 }
 
 model AssignmentSubmission {
@@ -284,4 +376,16 @@ model PlatformSetting {
   updatedAt   DateTime @updatedAt
 
   @@map("PlatformSetting")
+}
+
+model CourseInterest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@map("CourseInterest")
 }

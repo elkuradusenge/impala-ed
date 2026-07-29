@@ -4,10 +4,7 @@ import * as assignmentService from '../services/assignment.service';
 import { AuthRequest } from '../types';
 
 export const createAssignment = asyncWrapper(async (req: AuthRequest, res: Response) => {
-  const assignment = await assignmentService.createAssignment({
-    ...req.body,
-    mentorId: req.user!.id,
-  });
+  const assignment = await assignmentService.createAssignment({ ...req.body, mentorId: req.user!.id });
   res.status(201).json(assignment);
 });
 
@@ -26,25 +23,40 @@ export const updateAssignment = asyncWrapper(async (req: AuthRequest, res: Respo
   res.json(assignment);
 });
 
+export const togglePublishAssignment = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const assignment = await assignmentService.togglePublishAssignment(req.params.id, req.body.isPublished);
+  res.json(assignment);
+});
+
 export const deleteAssignment = asyncWrapper(async (req: AuthRequest, res: Response) => {
   await assignmentService.deactivateAssignment(req.params.id);
   res.json({ message: 'Assignment deactivated' });
 });
 
-export const submitAssignment = asyncWrapper(async (req: AuthRequest, res: Response) => {
-  const { submittedLink } = req.body;
-  const submission = await assignmentService.submitAssignment(req.params.id, req.user!.id, submittedLink);
-  res.json(submission);
+export const startAttempt = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const attempt = await assignmentService.startAttempt(req.params.id, req.user!.id);
+  res.json(attempt);
 });
 
-export const getMySubmissions = asyncWrapper(async (req: AuthRequest, res: Response) => {
-  const submissions = await assignmentService.getMySubmissions(req.user!.id);
-  res.json(submissions);
+export const saveAnswer = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const { questionId, answer, selectedOptionId } = req.body;
+  const result = await assignmentService.saveAnswer(req.params.attemptId, questionId, req.user!.id, answer, selectedOptionId);
+  res.json(result);
 });
 
-export const getSubmissionByAssignment = asyncWrapper(async (req: AuthRequest, res: Response) => {
-  const submission = await assignmentService.getSubmissionByAssignment(req.params.assignmentId, req.user!.id);
-  res.json(submission);
+export const submitAttempt = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const result = await assignmentService.submitAttempt(req.params.attemptId, req.user!.id);
+  res.json(result);
+});
+
+export const getAttemptById = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const attempt = await assignmentService.getAttemptById(req.params.attemptId, req.user!.id);
+  res.json(attempt);
+});
+
+export const getMyAttempts = asyncWrapper(async (req: AuthRequest, res: Response) => {
+  const attempts = await assignmentService.getMyAttempts(req.params.assignmentId, req.user!.id);
+  res.json(attempts);
 });
 
 export const getAllSubmissions = asyncWrapper(async (req: AuthRequest, res: Response) => {
