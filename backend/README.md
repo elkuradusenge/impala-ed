@@ -177,6 +177,8 @@ Demo accounts (from seed):
 ## Running Tests / Build
 
 ```bash
+npm install
+# npm prisma:seed # optional (only execute if you want to use seed that as mentioned above)
 npm run dev        # Start dev server with hot reload
 npx tsc --noEmit   # Type-check without emitting
 npx prisma studio  # Open Prisma DB browser
